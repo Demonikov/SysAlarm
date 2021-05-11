@@ -40,6 +40,28 @@ char users[5][9], cPasses[5][7];
 Keypad keypad = Keypad( makeKeymap(keys), rowPins, colPins, ROWS, COLS );
 LiquidCrystal lcd(RS, RW, ENABLE, DB0, DB1, DB2, DB3, DB4, DB5, DB6, DB7);
 
+// Ecrase l'EEPROM
+void setupEEPROM() {
+    String EEPROM_codes[5] = {
+        "123456", "111111",
+        "222222", "333333",
+        "444444"
+    };
+    String EEPROM_users[5] = {
+        "User0", "User1",
+        "User2", "User3",
+        "User4"
+    };
+
+    for (int s = 0; s < 5; s++) {
+        for (int n = 0; n < 8; n++)
+            EEPROM.write(s * 8 + n, EEPROM_users[s][n]);
+        for (int c = 0; c < 6; c++) {
+            EEPROM.write(40 + s * 6 + c, EEPROM_codes[s][c]);
+        }
+    }
+}
+
 // ++++++++++++++++++++++++++++++++++++++++++++++++++
 // +++ --- FONCTIONS DE TRAITEMENT DE DONNÉES --- +++
 // ++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -69,10 +91,11 @@ void getCode(bool permitConfig = false)
                     return;
                 i = 0;
                 menuconfig();
-                break;
+
             case '#':
                 i = 0;
                 break;
+
             default:
                 cBuffer[i] = key;
                 i = ++i % 6;
@@ -151,64 +174,80 @@ void Status(byte zone)
 // +++ --- FONCTIONS DE CONFIGURATION --- +++
 // ++++++++++++++++++++++++++++++++++++++++++
 
+bool authentification(int user)
+{
+    int matchedUser;
+
+    Serial.println("Entrez le code actuel sur le clavier numerique");
+    while (cBuffer[5] == '\0')
+        getCode();
+    if (checkCode(matchedUser))
+        return true;
+
+    Serial.println("Mauvais code!");
+    return false;
+}
+
 // Modifie le nom d'un utilisateur
 void editName()
 {
     int userNum = getSerial("Nom a modifier: ").toInt();
+
+    if (!authentification(userNum)) {
+        return;
+    }
+
     String newName = getSerial("Nouveau nom (8 caracteres max): ");
     if (newName.length() < 9 && newName.length()) { // Entre 1 et 8 carac.
+
         // Enregistre dans l'EEPROM & la RAM
         for (int n = 0; n < 8; n++) {
             EEPROM.write(userNum * 8 + n, newName[n]);
             users[userNum][n] = newName[n];
         }
     } else {
-        Serial.println("Nom ou utilisateur invalide!");
+        Serial.println("Nom invalide!");
     }
+
 }
 
 // Modifie le code d'un utilisateur
 void editCode()
 {
-    int matchedUser;
     int userNum = getSerial("Code a modifier: ").toInt();
 
-    // Authentification
-    Serial.println("Entrez le code actuel sur le clavier numerique");
+    if (!authentification(userNum)) {
+        return;
+    }
+
+    Serial.println("Entrez le nouveau code");
     while (cBuffer[5] == '\0')
         getCode();
-    checkCode(matchedUser);
 
-    if (matchedUser == userNum) {
-        Serial.println("Entrez le nouveau code");
-        while (cBuffer[5] == '\0')
-            getCode();
-
-        for (int c = 0; c < 6; c++) {
-            EEPROM.write(40 + userNum * 6 + c, cBuffer[c]);
-            cPasses[userNum][c] = cBuffer[c];
-        }
-    } else {
-        Serial.println("Mauvais code!");
+    for (int c = 0; c < 6; c++) {
+        EEPROM.write(40 + userNum * 6 + c, cBuffer[c]);
+        cPasses[userNum][c] = cBuffer[c];
     }
+    memset(cBuffer, '\0', 6);
 }
 
 // Menu de Configuration
 void menuconfig()
 {
     // Vide le buffer du port série
-    while (Serial.available()) {
+    while (Serial.available())
         Serial.read();
-    }
+
     PORTB |= B1000;
     tone(BUZZER_PIN, 523.25, 100);
     int iBuffer = 0;
 
     while (iBuffer != 4) {
         iBuffer = getSerial((
-                                "\n[1] Afficher les utilisateurs"
-                                "\n[2] Modifier nom d'utilisateur"
-                                "\n[3] Modifier code d'utilisateur"
+                                "\n------------------------------"
+                                "\n[1] Afficher utilisateurs"
+                                "\n[2] Modifier utilisateur"
+                                "\n[3] Modifier code"
                                 "\n[4] Quitter\n"
                             )).toInt();
 
@@ -228,7 +267,6 @@ void menuconfig()
     }
 
     PORTB &= B0110;
-    return;
 }
 
 // +++++++++++++++++++++
@@ -263,7 +301,9 @@ void checkAlarm(bool &Alarm)
 void setup()
 {
     Serial.begin(9600);
-
+    // Décommenter lors de la première exécution
+    //void setupEEPROM()
+    
     // Lecture des noms et codes d'utilisateur dans l'EEPROM
     for (int s = 0; s < 5; s++) { // Cycle string
         for (int n = 0; n < 8; n++) // Cycle bits de nom
