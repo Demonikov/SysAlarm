@@ -2,13 +2,14 @@
 SysAlarm est un système d'alarme conçu pour les microcontrôleurs Arduino en ayant comme objectif la sécurité et la simplicité
 
 ## Fonctionnement
+<div style="text-align: justify">
 Pour armer le système, il suffit d'entrer un des codes valides sur le clavier numérique, le nom associé au code
 apparaitra aussi sur le LCD. Lorsqu'armé le système déclenche l'alarme en cas d'intrusion ou dans le cas de l'ouverture
 de la porte d'entrée un délai configurable donne le temps de désarmer le système.
 
 Quand le système est désarmé, on peut utiliser la touche **#** pour recommencer la saisie du code et __*__ pour
 lancer le menu de configuration. Noter que le menu ne peut être accédé que si le système est __désarmé__ et que
-celui-ci mettra le reste du système en attente par précaution.
+celui-ci mettra le reste du système en attente par précaution. </div>
 
 ## Fonctionnalités
 * Délai permettant de sortir avant l'armement du système 
