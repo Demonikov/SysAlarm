@@ -350,7 +350,7 @@ void loop()
             sec = DOOR_DELAY + 1; // +1 pour compenser le débordement instantané
             TIMSK1 |= (1 << TOIE1); // Active les interruptions de débordement
             lcd.clear();
-            lcd.print("---- ARMAGE ----");
+            lcd.print("--- ARMEMENT ---");
         } else { // Désarmage
             Alarm = Arme = Arming = false;
             Status(Arme, iUser);
