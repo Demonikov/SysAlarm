@@ -1,8 +1,19 @@
 /*
  * Système d'alarme
- *      
- *      Crée le 26 avril 2021
- *      Autheur: Vincent Dupont
+ * Copyright (C) 2021 Vincent Dupont <vincent.dupont99@hotmail.ca>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 #include <Keypad.h>
@@ -19,7 +30,7 @@
  * 65536 - 62500 = 3036
  */
 #define TIMER1_VAL 3036
-#define BUZZER 69
+#define BUZZER_PIN 69
 #define DOOR_DELAY 10 // sec
 
 volatile int sec = 0; // Compteur de seconde
@@ -49,7 +60,7 @@ void getCode(bool permitConfig = false)
     static int i;
     char key = keypad.getKey();
     if (key != NO_KEY) {
-        tone(BUZZER, 698.46, 100);
+        tone(BUZZER_PIN, 698.46, 100);
         if (i == 0)
             memset(cBuffer, '\0', 6); // Efface le buffer
         switch (key) {
@@ -190,7 +201,7 @@ void menuconfig()
         Serial.read();
     }
     PORTB |= B1000;
-    tone(BUZZER, 523.25, 100);
+    tone(BUZZER_PIN, 523.25, 100);
     int iBuffer = 0;
 
     while (iBuffer != 4) {
@@ -231,7 +242,7 @@ void checkAlarm(bool &Alarm)
     switch (PIND) {
         case B0000: // Aucune intrusion
             break;
-        case B0001: // Par la porte!
+        case B0001: // Intrusion par la porte!
             if (!Pending) {
                 sec = DOOR_DELAY + 1;
                 TIMSK1 |= (1 << TOIE1);
@@ -239,7 +250,7 @@ void checkAlarm(bool &Alarm)
             }
             if (sec > 0) // ouverte depuis <10 sec
                 return;
-        default:    // Par ailleur!
+        default:    // Intrusion par ailleur!
             if (!Alarm) {
                 Status(PIND);
                 Alarm = true;
@@ -247,14 +258,6 @@ void checkAlarm(bool &Alarm)
             }
             break;
     }
-}
-
-void leds(bool Arme)
-{
-    if (Arme)
-        PORTB = B0010; // Rouge
-    else
-        PORTB = B0100; // Verte
 }
 
 void setup()
@@ -272,7 +275,7 @@ void setup()
     DDRD = B0000; // Switches
     DDRB = B1111; // Dels
     PORTB = B0100;
-    pinMode(BUZZER, OUTPUT);
+    pinMode(BUZZER_PIN, OUTPUT);
 
     lcd.begin(16, 2);
     lcd.print("****DESARME*****");
@@ -311,22 +314,23 @@ void loop()
         } else { // Désarmage
             Alarm = Arme = Arming = false;
             Status(Arme, iUser);
+            PORTB = B0100; // DEL Verte
         }
-        tone(BUZZER, 554.25, 125); delay(150);
-        tone(BUZZER, 493.88, 125); delay(150);
-        tone(BUZZER, 554.25, 250); delay(300);
-        tone(BUZZER, 369.99, 500);
+        tone(BUZZER_PIN, 554.25, 125); delay(150);
+        tone(BUZZER_PIN, 493.88, 125); delay(150);
+        tone(BUZZER_PIN, 554.25, 250); delay(300);
+        tone(BUZZER_PIN, 369.99, 500);
     }
-    leds(Arme);
 
     // Armage du système d'alarme
     if (!Arme && !sec && Arming) {
         Arme = true;
         Arming = false;
         Status(Arme, iUser);
+        PORTB = B0010; // DEL Rouge
     }
     if (Arme && !Alarm)
         checkAlarm(Alarm);
     if (Alarm)
-        tone(BUZZER, millis() % 2000); // Plaisant
+        tone(BUZZER_PIN, millis() % 2000); // Plaisant
 }
